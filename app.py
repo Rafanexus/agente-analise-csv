@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_experimental.agents import create_pandas_dataframe_agent
 from langchain.agents.agent_types import AgentType
-from langchain.memory import ConversationBufferMemory
 
 # --- Configuração da Página Streamlit ---
 st.set_page_config(
@@ -47,11 +46,9 @@ if "messages" not in st.session_state:
 
 # --- Lógica da API Key (com suporte para Streamlit Secrets) ---
 try:
-    # Tenta obter a chave dos segredos do Streamlit (para deploy)
     st.session_state.google_api_key = st.secrets["GOOGLE_API_KEY"]
     os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
 except:
-    # Se falhar (rodando localmente), mostra o campo para inserir
     st.sidebar.warning("A chave da API do Google não foi encontrada nos segredos. Por favor, insira-a abaixo.")
     api_key_input = st.sidebar.text_input(
         "Chave da API do Google", 
@@ -70,7 +67,7 @@ with st.sidebar:
 
     if arquivo_csv:
         st.session_state.df = carregar_e_processar_csv(arquivo_csv)
-        if st.session_state.df is not None: # <-- AQUI ESTÁ A CORREÇÃO
+        if st.session_state.df is not None:
             st.success("Arquivo CSV carregado!")
             st.dataframe(st.session_state.df.head(), use_container_width=True)
 
@@ -85,18 +82,15 @@ if st.session_state.google_api_key and st.session_state.df is not None:
                 temperature=0,
                 convert_system_message_to_human=True
             )
-            memory = ConversationBufferMemory(
-                memory_key='chat_history', 
-                return_messages=True,
-                input_key='input',
-                output_key='output'
-            )
+            
+            # --- CORREÇÃO PRINCIPAL AQUI ---
             st.session_state.agent = create_pandas_dataframe_agent(
                 llm=llm,
                 df=st.session_state.df,
-                agent_type=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
+                # 1. Mudar o tipo de agente para o recomendado para Gemini
+                agent_type=AgentType.TOOL_CALLING, 
                 verbose=True,
-                memory=memory,
+                # 2. Remover a memória explícita (o agente 'tool-calling' gerencia isso)
                 handle_parsing_errors=True,
                 agent_executor_kwargs={"handle_parsing_errors": True},
                 allow_dangerous_code=True
@@ -108,6 +102,7 @@ if st.session_state.google_api_key and st.session_state.df is not None:
 
     st.header("Converse com seus Dados")
 
+    # Adiciona a mensagem inicial do assistente se o chat estiver vazio
     if not st.session_state.messages:
         st.session_state.messages.append({
             "role": "assistant", 
@@ -115,12 +110,14 @@ if st.session_state.google_api_key and st.session_state.df is not None:
             "figure": None
         })
 
+    # Exibe o histórico de mensagens
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
             if "figure" in message and message["figure"] is not None:
                 st.pyplot(message["figure"])
 
+    # Captura a pergunta do usuário
     if prompt := st.chat_input("Qual a distribuição da variável 'idade'?"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
@@ -129,9 +126,16 @@ if st.session_state.google_api_key and st.session_state.df is not None:
         with st.chat_message("assistant"):
             with st.spinner("O agente está pensando..."):
                 try:
-                    plt.close('all') # Fecha todas as figuras anteriores
+                    plt.close('all') # Garante que figuras antigas sejam limpas
                     
-                    response = st.session_state.agent.invoke({"input": prompt})
+                    # O agente agora precisa do histórico de chat para ser conversacional
+                    chat_history = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
+
+                    response = st.session_state.agent.invoke({
+                        "input": prompt,
+                        "chat_history": chat_history # Passa o histórico para o agente
+                    })
+                    
                     output_text = response["output"]
                     
                     fig = plt.gcf()
@@ -159,5 +163,4 @@ if st.session_state.google_api_key and st.session_state.df is not None:
                     st.session_state.messages.append({"role": "assistant", "content": error_message, "figure": None})
 
 else:
-    st.info("Por favor, faça o upload de um arquivo CSV na barra lateral para começar.")
-
+    st.info("Por favor, configure a API Key e faça o upload de um arquivo CSV na barra lateral para começar.")
