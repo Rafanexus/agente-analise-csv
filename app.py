@@ -78,7 +78,7 @@ if st.session_state.google_api_key and st.session_state.df is not None:
         st.info("Inicializando o agente de IA... Isso pode levar um momento.")
         try:
             llm = ChatGoogleGenerativeAI(
-                model="gemini-1.5-flash-latest",
+                model="gemini-2.5-flash",
                 temperature=0,
                 convert_system_message_to_human=True
             )
