@@ -87,8 +87,8 @@ if st.session_state.google_api_key and st.session_state.df is not None:
             st.session_state.agent = create_pandas_dataframe_agent(
                 llm=llm,
                 df=st.session_state.df,
-                # Use a string literal para o tipo de agente mais moderno do Google
-                agent_type="google_tools", 
+                # Usar a string 'tool-calling', que o erro confirmou ser suportada
+                agent_type='tool-calling', 
                 verbose=True,
                 handle_parsing_errors=True,
                 agent_executor_kwargs={"handle_parsing_errors": True},
