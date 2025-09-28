@@ -87,10 +87,9 @@ if st.session_state.google_api_key and st.session_state.df is not None:
             st.session_state.agent = create_pandas_dataframe_agent(
                 llm=llm,
                 df=st.session_state.df,
-                # 1. Mudar o tipo de agente para o recomendado para Gemini
-                agent_type=AgentType.TOOL_CALLING, 
+                # Use a string literal para o tipo de agente mais moderno do Google
+                agent_type="google_tools", 
                 verbose=True,
-                # 2. Remover a memória explícita (o agente 'tool-calling' gerencia isso)
                 handle_parsing_errors=True,
                 agent_executor_kwargs={"handle_parsing_errors": True},
                 allow_dangerous_code=True
