@@ -103,18 +103,30 @@ except:
         os.environ["GOOGLE_API_KEY"] = api_key_input
         st.sidebar.success("API Key configurada!")
 
+# --- ### CORREÇÃO DEFINITIVA NA BARRA LATERAL ### ---
 with st.sidebar:
     st.header("Upload do Arquivo")
     arquivo_csv = st.file_uploader("Selecione um arquivo CSV", type=["csv"])
 
-    if arquivo_csv:
+    # Verificamos se um arquivo foi carregado E se ele é diferente do que já está na sessão.
+    # Isso garante que este bloco só execute UMA VEZ por upload.
+    if arquivo_csv is not None and st.session_state.get('uploaded_file_name') != arquivo_csv.name:
         st.session_state.df = carregar_e_processar_csv(arquivo_csv)
+        
         if st.session_state.df is not None:
-            st.success("Arquivo CSV carregado!")
+            st.success(f"Arquivo '{arquivo_csv.name}' carregado!")
             st.dataframe(st.session_state.df.head(), use_container_width=True)
+            
+            # Armazena o nome do novo arquivo para evitar re-execução
+            st.session_state.uploaded_file_name = arquivo_csv.name
+            
+            # Agora, aqui é o lugar certo para resetar o agente e o chat
             st.session_state.agent = None
             st.session_state.messages = []
-            st.query_params.clear() # Limpa a URL se um novo arquivo for carregado
+            st.query_params.clear()
+            
+            # Força um novo carregamento da página para garantir que tudo está limpo
+            st.rerun()
 
 # --- Lógica Principal da Aplicação ---
 if st.session_state.google_api_key and st.session_state.df is not None:
