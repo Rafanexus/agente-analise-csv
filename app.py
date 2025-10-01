@@ -80,9 +80,11 @@ if 'agent' not in st.session_state:
 
 # --- ### MUDANÇA ###: Inicialização do chat a partir da URL ---
 # Pega o estado do chat da URL ao carregar a página
-query_params = st.query_params.to_dict()
+query_params = st.experimental_get_query_params()
 if "messages" not in st.session_state:
-    st.session_state.messages = deserializar_chat(query_params.get("chat", ""))
+    # CORREÇÃO: Ajuste para lidar com o formato de dicionário de experimental_get_query_params
+    chat_param = query_params.get("chat", [""])[0]
+    st.session_state.messages = deserializar_chat(chat_param)
 
 # ... (Lógica da API Key e Upload do Arquivo permanecem os mesmos) ...
 try:
