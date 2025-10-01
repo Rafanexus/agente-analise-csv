@@ -80,11 +80,16 @@ if 'agent' not in st.session_state:
 
 # --- ### MUDANÇA ###: Inicialização do chat a partir da URL ---
 # Pega o estado do chat da URL ao carregar a página
-query_params = st.experimental_get_query_params()
+query_params = st.query_params.to_dict()
 if "messages" not in st.session_state:
-    # CORREÇÃO: Ajuste para lidar com o formato de dicionário de experimental_get_query_params
-    chat_param = query_params.get("chat", [""])[0]
-    st.session_state.messages = deserializar_chat(chat_param)
+    # Usamos st.query_params para ler, como recomendado pela nova API do Streamlit.
+    try:
+        # O .get() em st.query_params retorna um valor simples, não uma lista.
+        chat_param = st.query_params.get("chat", "")
+        st.session_state.messages = deserializar_chat(chat_param)
+    except:
+        # Em caso de erro na URL, apenas começamos com uma lista vazia.
+        st.session_state.messages = []
 
 # ... (Lógica da API Key e Upload do Arquivo permanecem os mesmos) ...
 try:
